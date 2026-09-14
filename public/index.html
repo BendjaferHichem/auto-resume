@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>AI Hybrid Resume Builder</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<header class="app-header">
+  <h1>AI Hybrid Resume Builder</h1>
+  <p>Fill in your details, let AI polish it into a hybrid resume, then download it as a PDF.</p>
+</header>
+
+<main class="container">
+
+  <!-- STEP 1: PERSONAL INFO -->
+  <section class="card">
+    <h2>1. Personal Information</h2>
+    <div class="grid-2">
+      <div>
+        <label for="fullName">Full Name *</label>
+        <input type="text" id="fullName" required />
+      </div>
+      <div>
+        <label for="jobTitle">Target Job Title *</label>
+        <input type="text" id="jobTitle" placeholder="e.g. Senior Product Manager" required />
+      </div>
+      <div>
+        <label for="email">Email *</label>
+        <input type="email" id="email" required />
+      </div>
+      <div>
+        <label for="phone">Phone</label>
+        <input type="tel" id="phone" />
+      </div>
+      <div>
+        <label for="location">Location</label>
+        <input type="text" id="location" placeholder="City, Country" />
+      </div>
+      <div>
+        <label for="linkedin">LinkedIn URL</label>
+        <input type="url" id="linkedin" />
+      </div>
+      <div>
+        <label for="website">Portfolio / Website</label>
+        <input type="url" id="website" />
+      </div>
+    </div>
+  </section>
+
+  <!-- STEP 3: TARGET ROLE / JD -->
+  <section class="card">
+    <h2>2. Target Role (optional but recommended)</h2>
+    <label for="jobDescription">Paste a job description to tailor your resume toward it</label>
+    <textarea id="jobDescription" rows="4" placeholder="Paste the job posting here..."></textarea>
+  </section>
+
+  <!-- STEP 4: SUMMARY NOTES -->
+  <section class="card">
+    <h2>3. About You</h2>
+    <label for="rawSummary">Rough notes about your background, strengths, career goals</label>
+    <textarea id="rawSummary" rows="4" placeholder="Doesn't need to be polished — bullet points or rambling sentences are fine. The AI will rewrite this."></textarea>
+  </section>
+
+  <!-- STEP 5: SKILLS -->
+  <section class="card">
+    <h2>4. Skills</h2>
+    <label for="skills">List your skills, comma separated</label>
+    <textarea id="skills" rows="2" placeholder="e.g. Python, Stakeholder Management, SQL, Roadmapping, Figma"></textarea>
+  </section>
+
+  <!-- STEP 6: EXPERIENCE -->
+  <section class="card">
+    <h2>5. Work Experience</h2>
+    <div id="experienceList"></div>
+    <button type="button" class="btn-secondary" id="addExperience">+ Add Experience</button>
+  </section>
+
+  <!-- STEP 7: EDUCATION -->
+  <section class="card">
+    <h2>6. Education</h2>
+    <div id="educationList"></div>
+    <button type="button" class="btn-secondary" id="addEducation">+ Add Education</button>
+  </section>
+
+  <!-- STEP 8: CERTIFICATIONS / PROJECTS -->
+  <section class="card">
+    <h2>7. Certifications (optional)</h2>
+    <textarea id="certifications" rows="2" placeholder="One per line, e.g. PMP - Project Management Institute, 2022"></textarea>
+  </section>
+
+  <section class="card">
+    <h2>8. Projects (optional)</h2>
+    <div id="projectsList"></div>
+    <button type="button" class="btn-secondary" id="addProject">+ Add Project</button>
+  </section>
+
+  <!-- ACTIONS -->
+  <section class="card actions-card">
+    <button type="button" class="btn-primary" id="generateBtn">✨ Generate Resume with AI</button>
+    <div id="statusMsg" class="status-msg"></div>
+  </section>
+
+  <!-- PREVIEW -->
+  <section class="card preview-card hidden" id="previewCard">
+    <h2>Preview</h2>
+    <div id="resumePreview" class="resume-preview"></div>
+    <div class="preview-actions">
+      <button type="button" class="btn-secondary" id="regenerateBtn">↻ Regenerate</button>
+      <button type="button" class="btn-primary" id="downloadBtn">⬇ Download PDF</button>
+    </div>
+  </section>
+
+</main>
+
+<footer class="app-footer">
+  <p>Prototype — BYOK client-side AI call + server-side PDF rendering.</p>
+</footer>
+
+<!-- Templates for dynamically added rows -->
+<template id="experienceTemplate">
+  <div class="repeat-block" data-type="experience">
+    <button type="button" class="remove-btn" title="Remove">✕</button>
+    <div class="grid-2">
+      <div>
+        <label>Job Title</label>
+        <input type="text" class="exp-title" />
+      </div>
+      <div>
+        <label>Company</label>
+        <input type="text" class="exp-company" />
+      </div>
+      <div>
+        <label>Location</label>
+        <input type="text" class="exp-location" />
+      </div>
+      <div class="grid-2-inner">
+        <div>
+          <label>Start Date</label>
+          <input type="text" class="exp-start" placeholder="e.g. Jan 2021" />
+        </div>
+        <div>
+          <label>End Date</label>
+          <input type="text" class="exp-end" placeholder="e.g. Present" />
+        </div>
+      </div>
+    </div>
+    <label>Responsibilities / achievements (rough notes, one per line)</label>
+    <textarea class="exp-notes" rows="3" placeholder="e.g. led a team of 5; grew revenue by 20%; owned the onboarding flow redesign"></textarea>
+  </div>
+</template>
+
+<template id="educationTemplate">
+  <div class="repeat-block" data-type="education">
+    <button type="button" class="remove-btn" title="Remove">✕</button>
+    <div class="grid-2">
+      <div>
+        <label>Degree</label>
+        <input type="text" class="edu-degree" placeholder="e.g. B.Sc. Computer Science" />
+      </div>
+      <div>
+        <label>School</label>
+        <input type="text" class="edu-school" />
+      </div>
+      <div>
+        <label>Location</label>
+        <input type="text" class="edu-location" />
+      </div>
+      <div>
+        <label>Graduation Date</label>
+        <input type="text" class="edu-date" placeholder="e.g. 2020" />
+      </div>
+    </div>
+  </div>
+</template>
+
+<template id="projectTemplate">
+  <div class="repeat-block" data-type="project">
+    <button type="button" class="remove-btn" title="Remove">✕</button>
+    <label>Project Name</label>
+    <input type="text" class="proj-name" />
+    <label>Description / notes</label>
+    <textarea class="proj-notes" rows="2"></textarea>
+  </div>
+</template>
+
+<script src="script.js"></script>
+</body>
+</html>
