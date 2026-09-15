@@ -52,7 +52,9 @@ module.exports = async function handler(req, res) {
     await page.emulateMediaType("screen");
 
     // 2. Use 'domcontentloaded' to ensure content renders even if external fonts/scripts stall
-    await page.setContent(htmlContent, { waitUntil: "domcontentloaded", timeout: 15000 });
+    await page.setContent(buildResumeHtml(resume), { 
+  waitUntil: "domcontentloaded" 
+});
 
     const pdfBuffer = await page.pdf({
       format: "A4",
