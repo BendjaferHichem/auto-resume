@@ -6,8 +6,6 @@ const { buildResumeHtml } = require("../lib/resumeTemplate");
 
 async function getBrowser() {
   if (process.env.VERCEL) {
-    // Both @sparticuz/chromium and puppeteer-core are ES Modules,
-    // so both must be dynamically imported.
     const { default: chromium } = await import("@sparticuz/chromium");
     const puppeteer = (await import("puppeteer-core")).default;
 
@@ -40,10 +38,27 @@ module.exports = async function handler(req, res) {
 
   let browser;
   try {
+    const htmlContent = buildResumeHtml(resume);
+
+    // Sanity check: Ensure HTML template output isn't empty
+    if (!htmlContent || htmlContent.trim() === "") {
+      throw new Error("buildResumeHtml returned empty HTML string.");
+    }
+
     browser = await getBrowser();
     const page = await browser.newPage();
-    await page.setContent(buildResumeHtml(resume), { waitUntil: "networkidle0" });
-    const pdfBuffer = await page.pdf({ format: "A4", printBackground: true });
+
+    // 1. Emulate 'screen' media type to bypass `@media print { display: none }` CSS rules
+    await page.emulateMediaType("screen");
+
+    // 2. Use 'domcontentloaded' to ensure content renders even if external fonts/scripts stall
+    await page.setContent(htmlContent, { waitUntil: "domcontentloaded", timeout: 15000 });
+
+    const pdfBuffer = await page.pdf({
+      format: "A4",
+      printBackground: true,
+      preferCSSPageSize: true,
+    });
 
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader("Content-Disposition", 'attachment; filename="resume.pdf"');
