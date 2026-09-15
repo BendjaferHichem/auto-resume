@@ -1,23 +1,25 @@
-// POST /api/generate-pdf
-// Body: { resume: <resume JSON> }
-// Returns: application/pdf binary.
-
+const path = require("path");
 const { buildResumeHtml } = require("../lib/resumeTemplate");
 
 async function getBrowser() {
-  if (process.env.VERCEL) {
+  if (process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME) {
     const chromium = (await import("@sparticuz/chromium")).default;
     const puppeteer = (await import("puppeteer-core")).default;
 
-    // Optional font loading support for sparticuz/chromium
-    await chromium.font(
-      "https://raw.githack.com/googlefonts/noto-emoji/main/fonts/NotoColorEmoji.ttf"
-    ).catch(() => {});
+    // Optional graphics configuration for serverless environments
+    if (typeof chromium.setGraphicsMode === "function") {
+      chromium.setGraphicsMode(false);
+    }
+
+    const executablePath = await chromium.executablePath();
+    
+    // CRITICAL: Set LD_LIBRARY_PATH so Chromium can locate extracted .so libraries
+    process.env.LD_LIBRARY_PATH = path.dirname(executablePath);
 
     return puppeteer.launch({
       args: chromium.args,
       defaultViewport: chromium.defaultViewport,
-      executablePath: await chromium.executablePath(),
+      executablePath: executablePath,
       headless: chromium.headless,
     });
   }
@@ -43,18 +45,10 @@ module.exports = async function handler(req, res) {
   let browser;
   try {
     const htmlContent = buildResumeHtml(resume);
-
-    if (!htmlContent || htmlContent.trim() === "") {
-      throw new Error("buildResumeHtml returned empty HTML string.");
-    }
-
     browser = await getBrowser();
     const page = await browser.newPage();
 
-    // Set view media to screen
     await page.emulateMediaType("screen");
-
-    // Load content without blocking indefinitely on external assets
     await page.setContent(htmlContent, {
       waitUntil: "domcontentloaded",
       timeout: 15000,
