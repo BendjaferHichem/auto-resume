@@ -1,22 +1,17 @@
 // POST /api/generate-pdf
 // Body: { resume: <resume JSON as produced by /api/generate-resume> }
 // Returns: application/pdf binary.
-//
-// Vercel's serverless functions are read-only and size-limited, so a normal `puppeteer`
-// install (which bundles its own ~300MB Chromium) won't run there. In production we use
-// @sparticuz/chromium (a Chromium build made for serverless) + puppeteer-core. Locally,
-// full `puppeteer` (installed as a dev dependency) is simpler and just works.
 
 const { buildResumeHtml } = require("../lib/resumeTemplate");
 
 async function getBrowser() {
   if (process.env.VERCEL) {
-    // Production (or `vercel dev` with VERCEL=1): serverless Chromium.
-    // @sparticuz/chromium ships as an ES Module, so it must be loaded with a dynamic
-    // import() even from this CommonJS file — require() will throw ERR_REQUIRE_ESM.
+    // Both @sparticuz/chromium and puppeteer-core are ES Modules,
+    // so both must be dynamically imported.
     const { default: chromium } = await import("@sparticuz/chromium");
-    const puppeteer = require("puppeteer-core");
-    chromium.setGraphicsMode = false; // we only render text/HTML, no WebGL needed — lighter + fewer libs to extract
+    const puppeteer = (await import("puppeteer-core")).default;
+
+    chromium.setGraphicsMode = false;
     return puppeteer.launch({
       args: [...chromium.args, "--no-sandbox", "--disable-setuid-sandbox"],
       defaultViewport: chromium.defaultViewport,
@@ -24,6 +19,7 @@ async function getBrowser() {
       headless: chromium.headless,
     });
   }
+  
   // Local dev: full puppeteer with its own bundled Chrome.
   const puppeteer = require("puppeteer");
   return puppeteer.launch({
