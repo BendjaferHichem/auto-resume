@@ -14,6 +14,7 @@ async function getBrowser() {
     // Production (or `vercel dev` with VERCEL=1): serverless Chromium.
     const chromium = require("@sparticuz/chromium");
     const puppeteer = require("puppeteer-core");
+    chromium.setGraphicsMode = false; // we only render text/HTML, no WebGL needed — lighter + fewer libs to extract
     return puppeteer.launch({
       args: [...chromium.args, "--no-sandbox", "--disable-setuid-sandbox"],
       defaultViewport: chromium.defaultViewport,
@@ -55,4 +56,4 @@ module.exports = async function handler(req, res) {
   } finally {
     if (browser) await browser.close();
   }
-};
+ };
