@@ -12,7 +12,9 @@ const { buildResumeHtml } = require("../lib/resumeTemplate");
 async function getBrowser() {
   if (process.env.VERCEL) {
     // Production (or `vercel dev` with VERCEL=1): serverless Chromium.
-    const chromium = require("@sparticuz/chromium");
+    // @sparticuz/chromium ships as an ES Module, so it must be loaded with a dynamic
+    // import() even from this CommonJS file — require() will throw ERR_REQUIRE_ESM.
+    const { default: chromium } = await import("@sparticuz/chromium");
     const puppeteer = require("puppeteer-core");
     chromium.setGraphicsMode = false; // we only render text/HTML, no WebGL needed — lighter + fewer libs to extract
     return puppeteer.launch({
@@ -56,4 +58,4 @@ module.exports = async function handler(req, res) {
   } finally {
     if (browser) await browser.close();
   }
- };
+};
