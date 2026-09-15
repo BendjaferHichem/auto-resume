@@ -1,24 +1,28 @@
 // POST /api/generate-pdf
-// Body: { resume: <resume JSON as produced by /api/generate-resume> }
+// Body: { resume: <resume JSON> }
 // Returns: application/pdf binary.
 
 const { buildResumeHtml } = require("../lib/resumeTemplate");
 
 async function getBrowser() {
   if (process.env.VERCEL) {
-    const { default: chromium } = await import("@sparticuz/chromium");
+    const chromium = (await import("@sparticuz/chromium")).default;
     const puppeteer = (await import("puppeteer-core")).default;
 
-    chromium.setGraphicsMode = false;
+    // Optional font loading support for sparticuz/chromium
+    await chromium.font(
+      "https://raw.githack.com/googlefonts/noto-emoji/main/fonts/NotoColorEmoji.ttf"
+    ).catch(() => {});
+
     return puppeteer.launch({
-      args: [...chromium.args, "--no-sandbox", "--disable-setuid-sandbox"],
+      args: chromium.args,
       defaultViewport: chromium.defaultViewport,
       executablePath: await chromium.executablePath(),
       headless: chromium.headless,
     });
   }
-  
-  // Local dev: full puppeteer with its own bundled Chrome.
+
+  // Local development fallback
   const puppeteer = require("puppeteer");
   return puppeteer.launch({
     headless: true,
@@ -40,7 +44,6 @@ module.exports = async function handler(req, res) {
   try {
     const htmlContent = buildResumeHtml(resume);
 
-    // Sanity check: Ensure HTML template output isn't empty
     if (!htmlContent || htmlContent.trim() === "") {
       throw new Error("buildResumeHtml returned empty HTML string.");
     }
@@ -48,13 +51,14 @@ module.exports = async function handler(req, res) {
     browser = await getBrowser();
     const page = await browser.newPage();
 
-    // 1. Emulate 'screen' media type to bypass `@media print { display: none }` CSS rules
+    // Set view media to screen
     await page.emulateMediaType("screen");
 
-    // 2. Use 'domcontentloaded' to ensure content renders even if external fonts/scripts stall
-    await page.setContent(buildResumeHtml(resume), { 
-  waitUntil: "domcontentloaded" 
-});
+    // Load content without blocking indefinitely on external assets
+    await page.setContent(htmlContent, {
+      waitUntil: "domcontentloaded",
+      timeout: 15000,
+    });
 
     const pdfBuffer = await page.pdf({
       format: "A4",
@@ -66,9 +70,14 @@ module.exports = async function handler(req, res) {
     res.setHeader("Content-Disposition", 'attachment; filename="resume.pdf"');
     return res.status(200).send(pdfBuffer);
   } catch (err) {
-    console.error("generate-pdf failed:", err);
-    return res.status(500).json({ error: "PDF generation failed", details: err.message });
+    console.error("generate-pdf failure:", err);
+    return res.status(500).json({
+      error: "PDF generation failed",
+      details: err.message || String(err),
+    });
   } finally {
-    if (browser) await browser.close();
+    if (browser) {
+      await browser.close().catch(() => {});
+    }
   }
 };
