@@ -1,4 +1,3 @@
-const path = require("path");
 const { buildResumeHtml } = require("../lib/resumeTemplate");
 
 async function getBrowser() {
@@ -6,20 +5,10 @@ async function getBrowser() {
     const chromium = (await import("@sparticuz/chromium")).default;
     const puppeteer = (await import("puppeteer-core")).default;
 
-    // Optional graphics configuration for serverless environments
-    if (typeof chromium.setGraphicsMode === "function") {
-      chromium.setGraphicsMode(false);
-    }
-
-    const executablePath = await chromium.executablePath();
-    
-    // CRITICAL: Set LD_LIBRARY_PATH so Chromium can locate extracted .so libraries
-    process.env.LD_LIBRARY_PATH = path.dirname(executablePath);
-
     return puppeteer.launch({
       args: chromium.args,
       defaultViewport: chromium.defaultViewport,
-      executablePath: executablePath,
+      executablePath: await chromium.executablePath(),
       headless: chromium.headless,
     });
   }
