@@ -1,3 +1,4 @@
+const path = require("path");
 const { buildResumeHtml } = require("../lib/resumeTemplate");
 
 async function getBrowser() {
@@ -5,16 +6,16 @@ async function getBrowser() {
     const chromium = (await import("@sparticuz/chromium")).default;
     const puppeteer = (await import("puppeteer-core")).default;
 
-    // Direct path to execution binary
     const executablePath = await chromium.executablePath();
+    const execDir = path.dirname(executablePath);
+
+    // CRITICAL: Point Linux dynamic loader to extracted shared libraries
+    process.env.LD_LIBRARY_PATH = process.env.LD_LIBRARY_PATH
+      ? `${execDir}:${process.env.LD_LIBRARY_PATH}`
+      : execDir;
 
     return puppeteer.launch({
-      args: [
-        ...chromium.args,
-        "--disable-gpu",
-        "--single-process",
-        "--no-zygote"
-      ],
+      args: chromium.args,
       defaultViewport: chromium.defaultViewport,
       executablePath: executablePath,
       headless: chromium.headless,
@@ -47,8 +48,8 @@ module.exports = async function handler(req, res) {
 
     await page.emulateMediaType("screen");
     await page.setContent(htmlContent, {
-      waitUntil: "networkidle0",
-      timeout: 20000,
+      waitUntil: "domcontentloaded",
+      timeout: 15000,
     });
 
     const pdfBuffer = await page.pdf({
