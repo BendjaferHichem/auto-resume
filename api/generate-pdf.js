@@ -5,10 +5,18 @@ async function getBrowser() {
     const chromium = (await import("@sparticuz/chromium")).default;
     const puppeteer = (await import("puppeteer-core")).default;
 
+    // Direct path to execution binary
+    const executablePath = await chromium.executablePath();
+
     return puppeteer.launch({
-      args: chromium.args,
+      args: [
+        ...chromium.args,
+        "--disable-gpu",
+        "--single-process",
+        "--no-zygote"
+      ],
       defaultViewport: chromium.defaultViewport,
-      executablePath: await chromium.executablePath(),
+      executablePath: executablePath,
       headless: chromium.headless,
     });
   }
@@ -39,8 +47,8 @@ module.exports = async function handler(req, res) {
 
     await page.emulateMediaType("screen");
     await page.setContent(htmlContent, {
-      waitUntil: "domcontentloaded",
-      timeout: 15000,
+      waitUntil: "networkidle0",
+      timeout: 20000,
     });
 
     const pdfBuffer = await page.pdf({
