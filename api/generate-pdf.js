@@ -1,18 +1,17 @@
-const path = require("path");
 const { buildResumeHtml } = require("../lib/resumeTemplate");
+
+const CHROMIUM_PACK_URL =
+  "https://github.com/Sparticuz/chromium/releases/download/v131.0.0/chromium-v131.0.0-pack.tar";
 
 async function getBrowser() {
   if (process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME) {
-    const chromium = (await import("@sparticuz/chromium")).default;
+    const chromium = (await import("@sparticuz/chromium-min")).default;
     const puppeteer = (await import("puppeteer-core")).default;
 
-    const executablePath = await chromium.executablePath();
-    const execDir = path.dirname(executablePath);
+    // Turn off SWIFTShader/GPU to avoid requiring libnspr4.so / libnss3.so
+    chromium.setGraphicsMode = false;
 
-    // CRITICAL: Point Linux dynamic loader to extracted shared libraries
-    process.env.LD_LIBRARY_PATH = process.env.LD_LIBRARY_PATH
-      ? `${execDir}:${process.env.LD_LIBRARY_PATH}`
-      : execDir;
+    const executablePath = await chromium.executablePath(CHROMIUM_PACK_URL);
 
     return puppeteer.launch({
       args: chromium.args,
