@@ -51,15 +51,21 @@ module.exports = async function handler(req, res) {
       timeout: 15000,
     });
 
-    const pdfBuffer = await page.pdf({
+    const pdfData = await page.pdf({
       format: "A4",
       printBackground: true,
       preferCSSPageSize: true,
     });
+    // Force a real Node Buffer, and write it with res.end() (not res.send()) so the
+    // bytes go out untouched — res.send() on Vercel's Node runtime can re-encode a
+    // Buffer as text and corrupt binary content like a PDF.
+    const pdfBuffer = Buffer.from(pdfData);
 
+    res.statusCode = 200;
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader("Content-Disposition", 'attachment; filename="resume.pdf"');
-    return res.status(200).send(pdfBuffer);
+    res.setHeader("Content-Length", pdfBuffer.length);
+    return res.end(pdfBuffer);
   } catch (err) {
     console.error("generate-pdf failure:", err);
     return res.status(500).json({
